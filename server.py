@@ -38,7 +38,15 @@ class MineServer(ServerProtocol):
             self.buff_type.pack("?", debug_info))    # reduced debug info
     def packet_chat_message(self, buff):
         p_text = buff.unpack_string()
-        self.factory.send_chat("<%s> %s" % (self.display_name, p_text))
+        if not "/" in p_text:
+            self.logger.info("<%s> %s" % (self.display_name, p_text))
+            self.factory.send_chat("<%s> %s" % (self.display_name, p_text))
+        else:
+            self.factory.send_chat("command executed!")
+    def send_spawn_pos(self, position):  # args: (x, y, z) int
+        self.send_packet("spawn_position",
+                         self.buff_type.pack('q', position.get_pos())  # get_pos() is long long type
+                         )
     def send_position_and_look(self, x, y, z, yaw, pitch, flags=0b00000, tp_id=0):
         self.send_packet("player_position_and_look",
             self.buff_type.pack("dddff?",
@@ -55,6 +63,16 @@ class MineServer(ServerProtocol):
         else:
             payload = self.buff_type.pack('Q', 0)
         self.send_packet("keep_alive", payload)
+    def send_empty_chunk(self, x, z):  # args: chunk position ints (x, z)
+        self.send_packet("chunk_data", self.buff_type.pack('ii?H', x, z, True, 0) + self.buff_type.pack_varint(0))
+    def send_abilities(self, flying, fly, god, creative, fly_speed,
+                       walk_speed):  # args: bool (if flying, if can fly, if no damage, if creative, (num) fly speed, walk speed)
+        bitmask = 0
+        if flying: bitmask = bitmask | 0x02
+        if fly: bitmask = bitmask | 0x04
+        if god: bitmask = bitmask | 0x08
+        if creative: bitmask = bitmask | 0x01
+        self.send_packet("player_abilities", self.buff_type.pack('bff', bitmask, float(fly_speed), float(walk_speed)))
     def player_joined(self):
         ServerProtocol.player_joined(self)
         self.ip = self.remote_addr.host
@@ -64,7 +82,11 @@ class MineServer(ServerProtocol):
         addr = self.remote_addr.host
         print("[*] Player {} loggined in with IP {}".format(display_name, addr))
         self.send_game(0, default_gamemode, default_dimension, max_players, level_type, 10)
+        self.send_spawn_pos(self.position)
+        self.send_abilities(True, True, True, True, 0.2, 0.2)
         self.send_position_and_look(0, 25, 25, 0, 0)
+        #self.send_empty_chunk(0, 0)
+        self.factory.send_chat("Welcome to a MinecraftServer")
         self.ticker.add_loop(20, self.update_keep_alive)
     #def player_left(self):
     #    del players[self.entity_id]
