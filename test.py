@@ -23,18 +23,18 @@ class ChatRoomProtocol(ServerProtocol):
         self.send_packet("join_game",
             self.buff_type.pack("iBiB",
                 0,                              # entity id
-                3,                              # game mode
+                1,                              # game mode
                 0,                              # dimension
                 0),                             # max players
             self.buff_type.pack_string("flat"), # level type
-            self.buff_type.pack_varint(1),      # view distance
+            self.buff_type.pack_varint(100),      # view distance
             self.buff_type.pack("?", False))    # reduced debug info
 
         # Send "Player Position and Look" packet
         self.send_packet("player_position_and_look",
             self.buff_type.pack("dddff?",
                 0,                         # x
-                255,                       # y
+                25,                       # y
                 0,                         # z
                 0,                         # yaw
                 0,                         # pitch
