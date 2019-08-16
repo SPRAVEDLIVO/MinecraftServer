@@ -1,4 +1,3 @@
-# Please implement this later...
 import importlib.util, os
 events = {}
 commands = {}

@@ -6,6 +6,7 @@ from datamethods import Position
 import plugin
 plugin.main()
 event = plugin.Event()
+command = plugin.Command()
 
 props = config.Config()
 host = props.Get("server-ip")
@@ -48,10 +49,14 @@ class MineServer(ServerProtocol):
         self.send_packet("change_game_state", self.buff_type.pack('Bf', reason, state))
     def packet_chat_message(self, buff):
         p_text = buff.unpack_string()
-        if not "/" in p_text:
+        if p_text[0] != '/':
             self.factory.send_chat("<%s> %s" % (self.display_name, p_text))
         else:
-            if plugin.SetCommand(p_text[1:], p_text.split(' ')[1:]) == False:
+            txt = p_text[1:].split(" ")
+            command = txt[0]
+            nargs = p_text.split(' ')[1:]
+            event.SetEvent("selfevent", self, command, nargs)
+            if plugin.SetCommand(command, nargs) == False and self.send_error:
                 self.send_chat("Unknown command!")
         self.logger.info("<%s> %s" % (self.display_name, p_text))
     def send_spawn_pos(self, position):  # args: (x, y, z) int
@@ -75,7 +80,8 @@ class MineServer(ServerProtocol):
             payload = self.buff_type.pack('Q', 0)
         self.send_packet("keep_alive", payload)
     def send_empty_chunk(self, x, z):  # args: chunk position ints (x, z)
-        self.send_packet("chunk_data", self.buff_type.pack('ii?H', x, z, True, 0) + self.buff_type.pack_varint(0))
+        self.send_packet("chunk_data", 0x1001880C0060020)
+        #self.send_packet("chunk_data", self.buff_type.pack('ii?H', x, z, True, 0) + self.buff_type.pack_varint(0))
     def set_slot(self):
         self.send_packet("set_slot", self.buff_type.pack('BH?', 0, 3, True) + self.buff_type.pack_varint(5))
     def send_abilities(self, flying, fly, god, creative, fly_speed,
@@ -97,11 +103,16 @@ class MineServer(ServerProtocol):
         self.send_spawn_pos(self.position)
         self.send_abilities(True, True, True, True, 0.2, 0.2)
         self.send_position_and_look(0, 25, 25, 0, 0)
+        self.send_error = True
         #self.send_empty_chunk(0, 0)
         self.ticker.add_loop(20, self.update_keep_alive)
         event.SetEvent("on_join", display_name, addr)
     def player_left(self):
         ServerProtocol.player_left(self)
+    def set_position(self, x, y, z, xr=0, yr=0, on_ground=False):
+        self.position.set(x, y, z)
+        self.send_position_and_look(self.position, xr, yr, 0, on_ground)
+    # Some plugin core goes here
 class MineFactory(ServerFactory):
     protocol = MineServer
     def send_chat(self, message):
