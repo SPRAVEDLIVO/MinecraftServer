@@ -3,6 +3,9 @@ import datamethods
 import config
 from twisted.internet import reactor
 from datamethods import Position
+import plugin
+plugin.main()
+event = plugin.Event()
 
 props = config.Config()
 host = props.Get("server-ip")
@@ -36,6 +39,8 @@ class MineServer(ServerProtocol):
             self.buff_type.pack_string(level_type), # level type
             self.buff_type.pack_varint(view_distance),      # view distance
             self.buff_type.pack("?", debug_info))    # reduced debug info
+    def send_change_game_state(self, reason, state):
+        self.send_packet("change_game_state", self.buff_type.pack('Bf', reason, state))
     def packet_chat_message(self, buff):
         p_text = buff.unpack_string()
         if not "/" in p_text:
@@ -65,6 +70,8 @@ class MineServer(ServerProtocol):
         self.send_packet("keep_alive", payload)
     def send_empty_chunk(self, x, z):  # args: chunk position ints (x, z)
         self.send_packet("chunk_data", self.buff_type.pack('ii?H', x, z, True, 0) + self.buff_type.pack_varint(0))
+    def set_slot(self):
+        self.send_packet("set_slot", self.buff_type.pack('BH?', 0, 3, True) + self.buff_type.pack_varint(5))
     def send_abilities(self, flying, fly, god, creative, fly_speed,
                        walk_speed):  # args: bool (if flying, if can fly, if no damage, if creative, (num) fly speed, walk speed)
         bitmask = 0
@@ -80,17 +87,15 @@ class MineServer(ServerProtocol):
         self.entity_id = self.id
         display_name = self.display_name
         addr = self.remote_addr.host
-        print("[*] Player {} loggined in with IP {}".format(display_name, addr))
         self.send_game(0, default_gamemode, default_dimension, max_players, level_type, 10)
         self.send_spawn_pos(self.position)
         self.send_abilities(True, True, True, True, 0.2, 0.2)
         self.send_position_and_look(0, 25, 25, 0, 0)
         #self.send_empty_chunk(0, 0)
-        self.factory.send_chat("Welcome to a MinecraftServer")
         self.ticker.add_loop(20, self.update_keep_alive)
-    #def player_left(self):
-    #    del players[self.entity_id]
-    #    ServerProtocol.player_left(self)
+        event.SetEvent("on_join", display_name, addr)
+    def player_left(self):
+        ServerProtocol.player_left(self)
 class MineFactory(ServerFactory):
     protocol = MineServer
     def send_chat(self, message):
