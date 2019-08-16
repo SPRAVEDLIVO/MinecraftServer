@@ -23,7 +23,7 @@ class Event(object):
                 events.get(event).append(func)
         return func_wrap
 class Command(object):
-    def command_event(self, command):
+    def event(self, command):
         def func_wrap(func):
             if command not in commands.keys():
                 commands.update({command:[func]})
@@ -32,5 +32,8 @@ class Command(object):
         return func_wrap
 def SetCommand(command, args):
     assert type(args) == list
-    for func in commands.get(command):
-        func(args)
+    if command in commands.keys():
+        for func in commands.get(command):
+            func(args)
+    else:
+        return False

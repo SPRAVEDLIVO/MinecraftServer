@@ -29,6 +29,11 @@ class MineServer(ServerProtocol):
         global iterable_id
         iterable_id += 1
         return iterable_id
+    def send_chat(self, message_bytes, position=0):  # args: (message[str], position[int])
+        self.send_packet('chat_message',
+                         self.buff_type.pack_chat(message_bytes) +
+                         self.buff_type.pack('b', position)
+                         )
     def send_game(self, entity_id, gamemode, dimension, max_players, level_type, view_distance, debug_info=False):
         self.send_packet("join_game",
             self.buff_type.pack("iBiB",
@@ -44,10 +49,11 @@ class MineServer(ServerProtocol):
     def packet_chat_message(self, buff):
         p_text = buff.unpack_string()
         if not "/" in p_text:
-            self.logger.info("<%s> %s" % (self.display_name, p_text))
             self.factory.send_chat("<%s> %s" % (self.display_name, p_text))
         else:
-            self.factory.send_chat("command executed!")
+            if plugin.SetCommand(p_text[1:], p_text.split(' ')[1:]) == False:
+                self.send_chat("Unknown command!")
+        self.logger.info("<%s> %s" % (self.display_name, p_text))
     def send_spawn_pos(self, position):  # args: (x, y, z) int
         self.send_packet("spawn_position",
                          self.buff_type.pack('q', position.get_pos())  # get_pos() is long long type
@@ -105,8 +111,8 @@ class MineFactory(ServerFactory):
 def main():
     factory = MineFactory()
     factory.motd = motd
-    factory.listen(host, port)
     factory.max_players = max_players
     factory.online_mode = online_mode
+    factory.listen(host, port)
     reactor.run()
 main()
