@@ -17,7 +17,7 @@ motd = props.Get("motd")
 max_players = props.GetInt("max-players")
 default_dimension = 0
 online_mode = props.GetBoolean("online-mode")
-level_type = str(props.Get("level-type")).lower()
+level_type = props.Get("level-type").lower()
 
 players = {}
 iterable_id = 0
@@ -55,9 +55,9 @@ class MineServer(ServerProtocol):
             txt = p_text[1:].split(" ")
             command = txt[0]
             nargs = p_text.split(' ')[1:]
-            event.SetEvent("selfevent", self, command, nargs)
-            if plugin.SetCommand(command, nargs) == False and self.send_error:
+            if plugin.SetCommand(command, nargs, self) == False and self.send_error:
                 self.send_chat("Unknown command!")
+            self.send_error = True
         self.logger.info("<%s> %s" % (self.display_name, p_text))
     def send_spawn_pos(self, position):  # args: (x, y, z) int
         self.send_packet("spawn_position",
@@ -109,10 +109,10 @@ class MineServer(ServerProtocol):
         event.SetEvent("on_join", display_name, addr)
     def player_left(self):
         ServerProtocol.player_left(self)
+        event.SetEvent("on_leave", self.display_name, self.remote_addr.host)
     def set_position(self, x, y, z, xr=0, yr=0, on_ground=False):
         self.position.set(x, y, z)
         self.send_position_and_look(self.position, xr, yr, 0, on_ground)
-    # Some plugin core goes here
 class MineFactory(ServerFactory):
     protocol = MineServer
     def send_chat(self, message):
