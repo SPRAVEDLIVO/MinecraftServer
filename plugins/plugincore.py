@@ -2,9 +2,10 @@ import plugin, server, os
 from twisted.internet import reactor
 event = plugin.Event()
 command = plugin.Command()
-@event.event("on_join")
-def on_join(player, addr):
+@event.event("on_join", require="self")
+def on_join(s, player, addr):
     print(player, addr)
+    s.send_chat("Player %s has joined the server." % player)
 @command.event("login")
 def cmd(nargs):
     print(nargs)

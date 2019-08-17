@@ -106,10 +106,10 @@ class MineServer(ServerProtocol):
         self.send_error = True
         #self.send_empty_chunk(0, 0)
         self.ticker.add_loop(20, self.update_keep_alive)
-        event.SetEvent("on_join", display_name, addr)
+        event.SetEvent("on_join", self, display_name, addr)
     def player_left(self):
         ServerProtocol.player_left(self)
-        event.SetEvent("on_leave", self.display_name, self.remote_addr.host)
+        event.SetEvent("on_leave", self, self.display_name, self.remote_addr.host)
     def set_position(self, x, y, z, xr=0, yr=0, on_ground=False):
         self.position.set(x, y, z)
         self.send_position_and_look(self.position, xr, yr, 0, on_ground)

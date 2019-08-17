@@ -24,17 +24,19 @@ def dynamic_import(module):
     plugins.update({module:foo})
     spec.loader.exec_module(foo)
 class Event(object):
-    def SetEvent(self, event, *args):
-        if event not in events.keys():
-            events.update({event:[]})
-        for func in events.get(event):
-            func(*args)
+    def SetEvent(self, event, s, *args):
+        for d in events.get(event):
+            for func, req in d.items():
+                if req == "default":
+                    func(*args)
+                elif req == "self":
+                    func(s, *args)
     def event(self, event, require="default"):
         def func_wrap(func):
             if event not in events.keys():
-                events.update({event:[func]})
+                events.update({event:[{func:require}]})
             else:
-                events.get(event).append(func)
+                events.get(event).append({func:require})
         return func_wrap
 class Command(object):
     def event(self, command, require="default"):
