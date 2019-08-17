@@ -1,12 +1,17 @@
 from quarry.net.server import ServerFactory, ServerProtocol
-import datamethods
+import datamethods, time
 import config
 from twisted.internet import reactor
 from datamethods import Position
 import plugin
+import start
+from logger import Logger
 plugin.main()
 event = plugin.Event()
 command = plugin.Command()
+
+log = Logger("[server] ")
+info = Logger("[INFO] ")
 
 props = config.Config()
 host = props.Get("server-ip")
@@ -58,7 +63,7 @@ class MineServer(ServerProtocol):
             if plugin.SetCommand(command, nargs, self) == False and self.send_error:
                 self.send_chat("Unknown command!")
             self.send_error = True
-        self.logger.info("<%s> %s" % (self.display_name, p_text))
+        log.log("<%s> %s" % (self.display_name, p_text))
     def send_spawn_pos(self, position):  # args: (x, y, z) int
         self.send_packet("spawn_position",
                          self.buff_type.pack('q', position.get_pos())  # get_pos() is long long type
@@ -120,10 +125,15 @@ class MineFactory(ServerFactory):
             player.send_packet("chat_message",player.buff_type.pack_chat(message) + player.buff_type.pack('B', 0) )
 #portotype of server start
 def main():
+    st = time.time()
+    info.log("\nSatrting Minecraft Python server at 1.14...")
     factory = MineFactory()
     factory.motd = motd
+    start.startfunc(factory)
     factory.max_players = max_players
     factory.online_mode = online_mode
     factory.listen(host, port)
+    info.log("Successfully started Minecraft Python server.")
+    info.log("It took %f seconds to start your server." % (time.time() - st))
     reactor.run()
 main()
